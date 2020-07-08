@@ -62,14 +62,14 @@ int main(int argc, char * argv[]) try {
 
     if (RECORD_POSE) {
       // 6 Degrees of Freedom pose data, calculated by RealSense device
-      cfg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF /*, 15 (fps)*/);
+      cfg.enable_stream(RS2_STREAM_POSE, RS2_FORMAT_6DOF/*, 15*/);
     }
 
     if (RECORD_IMU) {
       // Native stream of gyroscope motion data produced by RealSense device
-      cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+      cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F/*, 15*/);
       // Native stream of accelerometer motion data produced by RealSense device
-      cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F /*, 15 (fps)*/);
+      cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F/*, 15*/);
     }
 
     if (RECORD_VIDEO) {
@@ -85,13 +85,14 @@ int main(int argc, char * argv[]) try {
     cv::Mat colorFrames[2];
 
     std::mutex dataMutex;
-
+    
     // The callback is executed on a sensor thread and can be called simultaneously from multiple sensors
     // Therefore any modification to common memory should be done under lock
     double firstMeasurementTime = -1.;
     auto callback = [&](const rs2::frame& frame) {
         std::lock_guard<std::mutex> lock(dataMutex);
 
+        /*
         // Convert timestamp to seconds after first measurement
         double timeStamp = frame.get_timestamp();
         if (firstMeasurementTime < 0.0) {
@@ -100,8 +101,11 @@ int main(int argc, char * argv[]) try {
         timeStamp = (timeStamp - firstMeasurementTime) / 1000.;
         if (timeStamp <= 0.0) { // Ensure time is always non-zero and positive
             timeStamp = 0.00000001;
-        }
-
+        }*/
+        auto now = std::chrono::system_clock::now();
+        auto nanosec = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
+        double timeStamp = nanosec.count();
+        
         // Cast the frame that arrived to motion frame, accelerometer + gyro
         auto motion = frame.as<rs2::motion_frame>();
         // If casting succeeded and the arrived frame is from gyro stream
@@ -120,7 +124,7 @@ int main(int argc, char * argv[]) try {
         if (pose && pose.get_profile().stream_type() == RS2_STREAM_POSE && pose.get_profile().format() == RS2_FORMAT_6DOF) {
             auto poseData = pose.get_pose_data();
             // Print some values for user to see everything is working
-            printPoseData(poseData, timeStamp);
+            // printPoseData(poseData, timeStamp);
             // Store data to JSON
             recorder->addOdometryOutput({
                 .time = timeStamp,
